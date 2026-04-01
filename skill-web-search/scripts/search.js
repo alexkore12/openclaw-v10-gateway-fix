@@ -1,4 +1,4 @@
-// search.js — Web search via curl + grep
+// search.js — Web search via Bing RSS (no API key needed)
 // Usage: node search.js "search query"
 const { execSync } = require('child_process');
 const query = process.argv.slice(2).join(' ');
@@ -9,23 +9,35 @@ if (!query) {
 }
 
 try {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const html = execSync(`curl -s -L --max-time 15 -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" "${url}"`, { encoding: 'utf8' });
+  const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=10&format=rss`;
+  const xml = execSync(`curl -s --max-time 15 -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -H "Accept-Language: en-US" "${url}"`, { encoding: 'utf8' });
+  
+  // Parse RSS items
+  const itemRe = /<item>([\s\S]*?)<\/item>/g;
+  const titleRe = /<title>([^<]+)<\/title>/;
+  const linkRe = /<link>([^<]+)<\/link>/;
+  const descRe = /<description>([^<]+)<\/description>/;
   
   const results = [];
-  const re = /<a class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g;
-  let m;
-  while ((m = re.exec(html)) !== null && results.length < 10) {
-    const title = m[2].replace(/<[^>]+>/g, '').trim();
-    const link = m[1];
-    const descMatch = html.substring(m.index, m.index + 500).match(/<a class="result__snippet"[^>]*>([^<]+)<\/a>/);
-    const desc = descMatch ? descMatch[1].replace(/<[^>]+>/g, '').trim() : '';
-    results.push({ title, link, desc });
+  let match;
+  while ((match = itemRe.exec(xml)) !== null && results.length < 10) {
+    const block = match[1];
+    const title = (titleRe.exec(block) || [])[1] || '';
+    const link = (linkRe.exec(block) || [])[1] || '';
+    const desc = (descRe.exec(block) || [])[1] || '';
+    const cleanDesc = desc.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').substring(0, 150);
+    if (title) results.push({ title, link, desc: cleanDesc });
   }
   
-  console.log('Query:', query);
-  console.log('Results:');
-  results.forEach((r, i) => console.log(`${i+1}. ${r.title}\n   ${r.link}\n   ${r.desc}`));
+  console.log('\n🔍 Query:', query);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  results.forEach((r, i) => {
+    console.log(`\n${i+1}. ${r.title}`);
+    console.log(`   🔗 ${r.link}`);
+    if (r.desc) console.log(`   📝 ${r.desc}`);
+  });
+  console.log('\n');
 } catch (e) {
   console.error('Error:', e.message);
+  process.exit(1);
 }
