@@ -1,0 +1,25 @@
+{
+  "approvals": {
+    "exec": {
+      "enabled": true,
+      "mode": "session",
+      "agentFilter": ["v10"],
+      "targets": [
+        { "channel": "telegram", "to": "YOUR_TELEGRAM_ID_HERE" }
+      ]
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "botToken": "YOUR_BOT_TOKEN",
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "execApprovals": {
+        "enabled": true,
+        "approvers": ["YOUR_TELEGRAM_ID_HERE"]
+      }
+    }
+  }
+}
